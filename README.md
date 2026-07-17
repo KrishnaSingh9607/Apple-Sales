@@ -191,18 +191,6 @@ Through this project, I practiced:
 
 ---
 
-# 📷 Dashboard Preview
-
-> Add a screenshot of your Excel Dashboard here.
-
-Example:
-
-```
-Images/dashboard.png
-```
-
----
-
 # ⭐ Future Improvements
 
 - Build an interactive Power BI Dashboard
