@@ -1,0 +1,148 @@
+CREATE TABLE stores(
+store_id VARCHAR(5) PRIMARY KEY,
+store_name VARCHAR(30),
+city VARCHAR(25),
+country VARCHAR(25)
+);
+
+ DROP TABLE IF EXISTS category;
+ 
+ CREATE TABLE category
+ (category_id VARCHAR(10) PRIMARY KEY,
+ category_name VARCHAR(20)
+ );
+ 
+CREATE TABLE products 
+(
+product_id   VARCHAR(10) PRIMARY KEY,
+product_name VARCHAR(35),
+category_id  VARCHAR(10),
+launch_date  date,
+price FLOAT,
+CONSTRAINT fk_category FOREIGN KEY (category_id) REFERENCES cartegory(category_id)
+);
+
+CREATE TABLE sales(
+sale_id VARCHAR(15) PRIMARY KEY,
+sale_date DATE,
+store_id  VARCHAR(10),
+product_id   VARCHAR(10),
+quantity INT,
+SELECT * FROM stores
+
+CONSTRAINT fk_store FOREIGN KEY (store_id) REFERENCES stores(store_id),
+CONSTRAINT fk_product FOREIGN KEY (product_id) REFERENCES products(product_id)
+);
+CREATE TABLE warranty(
+claim_id VARCHAR(10) PRIMARY KEY, 
+claim_date DATE, 
+sale_id VARCHAR(15),
+repair_status VARCHAR(15),
+CONSTRAINT fk_orders FOREIGN KEY (sale_id) REFERENCES sales(sale_id) );
+DROP TABLE IF EXISTS warranty;
+ 
+// importing data from table
+//1
+SELECT
+    country,
+    COUNT(store_id)    AS total_stores
+FROM stores
+GROUP BY country
+ORDER BY total_stores DESC;
+
+//2
+
+SELECT
+    st.store_name,
+    SUM(s.quantity)   AS total_units_sold
+FROM sales s
+INNER JOIN stores st
+    ON s.store_id = st.store_id
+GROUP BY st.store_name
+ORDER BY total_units_sold DESC;
+//3
+
+
+SELECT
+    COUNT(sales_id)    AS total_sales
+FROM sales
+WHERE sales_date BETWEEN '2023-12-01' AND '2023-12-31';
+//4
+SELECT  store_id,  store_name
+   
+FROM stores
+WHERE store_id NOT IN (
+    SELECT DISTINCT s.store_id
+    FROM warranty w
+    INNER JOIN sales s
+        ON w.sale_id = s.sales_id
+    WHERE s.store_id IS NOT NULL
+);
+
+//5
+SELECT
+    ROUND(
+        COUNT(CASE WHEN repair_status = 'Warranty Void'
+                   THEN 1 END) * 100.0
+        / COUNT(*),
+        2
+    )                 AS void_percentage
+FROM warranty;
+//6
+SELECT
+    st.store_name,
+    SUM(s.quantity)   AS total_units
+FROM sales s
+INNER JOIN stores st
+    ON s.store_id = st.store_id
+WHERE s.sales_date >= DATE'2024-08-05' - INTERVAL '1 year 2 months'
+GROUP BY st.store_name
+ORDER BY total_units DESC
+LIMIT 5;
+
+//7
+SELECT
+    COUNT(DISTINCT product_id)   AS unique_skus_sold
+FROM sales
+WHERE sales_date >= DATE'2024-08-05' - INTERVAL '1 year';
+
+//8
+SELECT
+    c.category_name,
+    CAST(AVG(p.price) AS INT)   AS avg_retail_price
+FROM products p
+INNER JOIN category c
+    ON p.category_id = c.category_id
+GROUP BY c.category_name
+ORDER BY avg_retail_price DESC;
+//9
+SELECT
+    COUNT(claim_id)   AS total_claims_2020
+FROM warranty
+WHERE EXTRACT(YEAR FROM claim_date) = 2020;
+//10
+WITH daily_sales AS (
+    SELECT
+        s.store_id,
+        st.store_name,
+        TRIM(TO_CHAR(s.sales_date, 'Day'))   AS weekday,
+        SUM(s.quantity)                     AS total_units,
+        RANK() OVER (
+            PARTITION BY s.store_id
+            ORDER BY SUM(s.quantity) DESC
+        )                                   AS sales_rank
+    FROM sales s
+    INNER JOIN stores st
+        ON s.store_id = st.store_id
+    GROUP BY
+        s.store_id,
+        st.store_name,
+        TRIM(TO_CHAR(s.sales_date, 'Day'))
+)
+SELECT
+    store_name,
+    weekday           AS best_selling_day,
+    total_units
+FROM daily_sales
+WHERE sales_rank = 1
+ORDER BY store_name;
